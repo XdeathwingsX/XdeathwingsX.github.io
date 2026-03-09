@@ -1,0 +1,198 @@
+﻿:root {
+  --yes-scale: 1;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-right: max(12px, env(safe-area-inset-right));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+}
+
+.aurora {
+  animation: drift 11s ease-in-out infinite alternate;
+}
+
+#envelope-button {
+  filter: drop-shadow(0 16px 36px rgba(120, 14, 46, 0.35));
+}
+
+.envelope-pocket,
+.envelope-flap,
+.envelope-letter,
+.envelope-seal {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.envelope-letter {
+  top: 34%;
+  width: 78%;
+  height: 64%;
+  background: #fff;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 18px rgba(40, 30, 32, 0.22);
+  transition: transform 900ms cubic-bezier(0.22, 0.75, 0.24, 1), top 900ms cubic-bezier(0.22, 0.75, 0.24, 1);
+  z-index: 1;
+}
+
+.envelope-pocket {
+  bottom: 10%;
+  width: 92%;
+  height: 58%;
+  border-radius: 0 0 20px 20px;
+  background: linear-gradient(180deg, #ff4169, #ea2f58);
+  z-index: 3;
+}
+
+.envelope-flap {
+  top: 14%;
+  width: 92%;
+  height: 50%;
+  background: linear-gradient(180deg, #ff5b7f, #ff3f67);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform-origin: top;
+  transition: transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 4;
+}
+
+.envelope-seal {
+  top: 47%;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  background: #ffd3de;
+  color: #ea315b;
+  font-size: 1.15rem;
+  line-height: 2.75rem;
+  z-index: 5;
+  transition: opacity 250ms ease;
+}
+
+#envelope-button.opened .envelope-flap {
+  transform: translateX(-50%) rotateX(182deg);
+}
+
+#envelope-button.opened .envelope-letter {
+  top: 3%;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+#envelope-button.opened .envelope-seal {
+  opacity: 0;
+}
+
+.glass-card {
+  transform: translateZ(0);
+}
+
+#yes-btn {
+  transform: translate(-50%, -50%) scale(var(--yes-scale));
+}
+
+#yes-btn.yes-pop {
+  animation: yesPop 240ms ease-out;
+}
+
+#hint {
+  transition: opacity 260ms ease;
+}
+
+.card-enter {
+  animation: riseIn 650ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+.screen-fade-out {
+  animation: fadeOut 380ms ease forwards;
+}
+
+.screen-fade-in {
+  animation: fadeIn 520ms ease forwards;
+}
+
+.heart-fall {
+  position: fixed;
+  top: -20px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(12px, -18px, 0) scale(1.08);
+  }
+}
+
+@keyframes riseIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes yesPop {
+  0% {
+    transform: translate(-50%, -50%) scale(calc(var(--yes-scale) * 0.94));
+  }
+
+  60% {
+    transform: translate(-50%, -50%) scale(calc(var(--yes-scale) * 1.07));
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(var(--yes-scale));
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 430px) {
+  #buttons-wrap {
+    height: 18rem;
+  }
+
+  #yes-btn,
+  #no-btn {
+    min-width: 136px;
+  }
+
+  #envelope-button {
+    height: 16rem;
+  }
+}

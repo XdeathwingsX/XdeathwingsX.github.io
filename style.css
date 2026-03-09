@@ -7,19 +7,41 @@
 }
 
 body {
+  margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-  padding-top: max(12px, env(safe-area-inset-top));
-  padding-right: max(12px, env(safe-area-inset-right));
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-  padding-left: max(12px, env(safe-area-inset-left));
-}
-
-.aurora {
-  animation: drift 11s ease-in-out infinite alternate;
+  background: #5c1830;
 }
 
 #envelope-button {
-  filter: drop-shadow(0 16px 36px rgba(120, 14, 46, 0.35));
+  display: block;
+  overflow: hidden;
+}
+
+.envelope-top-text,
+.envelope-bottom-text {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  margin: 0;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #ffe6ee;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+.envelope-top-text {
+  top: max(20px, env(safe-area-inset-top));
+  font-size: clamp(0.76rem, 1.8vw, 1rem);
+  font-weight: 600;
+}
+
+.envelope-bottom-text {
+  bottom: max(20px, env(safe-area-inset-bottom));
+  font-size: clamp(0.8rem, 1.9vw, 1.02rem);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: none;
 }
 
 .envelope-pocket,
@@ -31,61 +53,62 @@ body {
   transform: translateX(-50%);
 }
 
-.envelope-letter {
-  top: 34%;
-  width: 78%;
-  height: 64%;
-  background: #fff;
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 18px rgba(40, 30, 32, 0.22);
-  transition: transform 900ms cubic-bezier(0.22, 0.75, 0.24, 1), top 900ms cubic-bezier(0.22, 0.75, 0.24, 1);
-  z-index: 1;
-}
-
 .envelope-pocket {
-  bottom: 10%;
-  width: 92%;
-  height: 58%;
-  border-radius: 0 0 20px 20px;
-  background: linear-gradient(180deg, #ff4169, #ea2f58);
-  z-index: 3;
+  bottom: 0;
+  width: 100%;
+  height: 64%;
+  background: linear-gradient(180deg, #7e1f3f, #5c1530);
+  z-index: 2;
 }
 
 .envelope-flap {
-  top: 14%;
-  width: 92%;
-  height: 50%;
-  background: linear-gradient(180deg, #ff5b7f, #ff3f67);
+  top: 0;
+  width: 100%;
+  height: 58%;
+  background: linear-gradient(180deg, #84304b, #67223f);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   transform-origin: top;
   transition: transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: 4;
 }
 
+.envelope-letter {
+  top: 34%;
+  width: min(84vw, 560px);
+  height: min(52vh, 420px);
+  background: #fff;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 26px rgba(26, 15, 19, 0.32);
+  transition: transform 900ms cubic-bezier(0.22, 0.75, 0.24, 1), top 900ms cubic-bezier(0.22, 0.75, 0.24, 1);
+  z-index: 1;
+}
+
 .envelope-seal {
-  top: 47%;
-  width: 2.75rem;
-  height: 2.75rem;
+  top: 50%;
+  width: 4.2rem;
+  height: 4.2rem;
   border-radius: 999px;
-  background: #ffd3de;
-  color: #ea315b;
-  font-size: 1.15rem;
-  line-height: 2.75rem;
+  background: #f6d2de;
+  color: #6f1b38;
+  font-size: 1.9rem;
+  line-height: 4.2rem;
   z-index: 5;
-  transition: opacity 250ms ease;
+  box-shadow: 0 8px 18px rgba(22, 0, 8, 0.3);
+  transition: opacity 260ms ease;
 }
 
 #envelope-button.opened .envelope-flap {
-  transform: translateX(-50%) rotateX(182deg);
+  transform: translateX(-50%) rotateX(180deg);
 }
 
 #envelope-button.opened .envelope-letter {
-  top: 3%;
-  transform: translateX(-50%) translateY(-8px);
+  top: -12%;
+  transform: translateX(-50%) translateY(-10px);
+  z-index: 6;
 }
 
 #envelope-button.opened .envelope-seal {
@@ -125,16 +148,6 @@ body {
   top: -20px;
   pointer-events: none;
   will-change: transform, opacity;
-}
-
-@keyframes drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-
-  to {
-    transform: translate3d(12px, -18px, 0) scale(1.08);
-  }
 }
 
 @keyframes riseIn {
@@ -192,7 +205,15 @@ body {
     min-width: 136px;
   }
 
-  #envelope-button {
-    height: 16rem;
+  .envelope-seal {
+    width: 3.6rem;
+    height: 3.6rem;
+    line-height: 3.6rem;
+    font-size: 1.5rem;
+  }
+
+  .envelope-letter {
+    width: 88vw;
+    height: 44vh;
   }
 }

@@ -390,7 +390,7 @@ async function runCollageStage() {
   let sources = await loadCollageSources(6);
 
   if (sources.length < 4) {
-    sources = ["photos/0.jpeg", "photos/1.jpeg", "photos/2.jpeg", "photos/4.jpeg", "photos/5.jpeg", "photos/6.jpeg"];
+    sources = ["Photos/0.jpeg", "Photos/1.jpeg", "Photos/2.jpeg", "Photos/4.jpeg", "Photos/5.jpeg", "Photos/6.jpeg"];
   }
 
   const used = sources.slice(0, 6);
@@ -494,6 +494,7 @@ window.addEventListener("resize", () => {
     resetNoButtonPosition();
   }
 });
+
 
 
 

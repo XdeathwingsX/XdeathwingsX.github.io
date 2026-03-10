@@ -335,7 +335,7 @@ async function loadCollageSources(maxImages = 6) {
 
   for (let i = 0; i <= 20; i += 1) {
     for (const ext of exts) {
-      const src = `photos/${i}.${ext}`;
+      const src = `Photos/${i}.${ext}`;
       const loaded = await tryLoadImage(src);
 
       if (loaded) {
@@ -494,6 +494,7 @@ window.addEventListener("resize", () => {
     resetNoButtonPosition();
   }
 });
+
 
 
 

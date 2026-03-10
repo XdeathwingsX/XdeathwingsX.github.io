@@ -3,12 +3,21 @@ const envelopeScreen = document.getElementById("envelope-screen");
 const gameScreen = document.getElementById("game-screen");
 const envelopeButton = document.getElementById("envelope-button");
 const envelopeHint = document.getElementById("envelope-hint");
+const bgMusic = document.getElementById("bg-music");
+
+const storyScreen = document.getElementById("story-screen");
+const memoryStage = document.getElementById("memory-stage");
+const collageStage = document.getElementById("collage-stage");
+const transitionStage = document.getElementById("transition-stage");
+const collageGrid = document.getElementById("collage-grid");
+const memoryLine = document.getElementById("memory-line");
 
 const questionCard = document.getElementById("question-card");
 const celebrateCard = document.getElementById("celebrate-card");
 const yesBtn = document.getElementById("yes-btn");
 const noBtn = document.getElementById("no-btn");
 const hint = document.getElementById("hint");
+const noFinalMessage = document.getElementById("no-final-message");
 const wrap = document.getElementById("buttons-wrap");
 
 const hints = [
@@ -19,21 +28,33 @@ const hints = [
   "At this point, even No says Yes."
 ];
 
+const noLabelSequence = [
+  "No",
+  "Are you sure?",
+  "Sherikm?",
+  "Onnudi Chinthiche?",
+  "Onnudi ninte thala onnu upayogiche?",
+  "onnu podi penne 😉"
+];
+
 let dodgeCount = 0;
 let yesScale = 1;
+let noScale = 1;
 let noMoving = false;
+let noDisabled = false;
 let envelopeOpened = false;
+let noLabelIndex = 0;
+let clickSuppressUntil = 0;
+let musicStarted = false;
+let musicFadeFrame = null;
+let celebrateStarted = false;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(value, max));
 }
 
-function lerp(start, end, t) {
-  return start + (end - start) * t;
-}
-
-function easeInOutSine(t) {
-  return -(Math.cos(Math.PI * t) - 1) / 2;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isPhoneLayout() {
@@ -68,85 +89,153 @@ function growYesButton() {
   requestAnimationFrame(() => yesBtn.classList.add("yes-pop"));
 }
 
-function currentNoPosition() {
-  const wrapRect = wrap.getBoundingClientRect();
-  const noRect = noBtn.getBoundingClientRect();
+function fadeMusicTo(targetVolume, durationMs) {
+  if (!bgMusic) {
+    return;
+  }
 
-  return {
-    x: clamp(noRect.left - wrapRect.left, 0, wrapRect.width - noRect.width),
-    y: clamp(noRect.top - wrapRect.top, 0, wrapRect.height - noRect.height)
-  };
+  if (musicFadeFrame) {
+    cancelAnimationFrame(musicFadeFrame);
+  }
+
+  const startVolume = bgMusic.volume;
+  const start = performance.now();
+
+  function step(now) {
+    const progress = clamp((now - start) / durationMs, 0, 1);
+    bgMusic.volume = startVolume + (targetVolume - startVolume) * progress;
+
+    if (progress < 1) {
+      musicFadeFrame = requestAnimationFrame(step);
+    } else {
+      musicFadeFrame = null;
+    }
+  }
+
+  musicFadeFrame = requestAnimationFrame(step);
 }
 
-function placeNoAt(x, y) {
-  noBtn.style.left = `${x}px`;
-  noBtn.style.top = `${y}px`;
-  noBtn.style.transform = "none";
+function trySeekMusicToTenSeconds() {
+  if (!bgMusic) {
+    return;
+  }
+
+  const target = 26;
+
+  try {
+    if (Number.isFinite(bgMusic.duration) && bgMusic.duration > target) {
+      bgMusic.currentTime = target;
+    } else if (!Number.isFinite(bgMusic.duration)) {
+      bgMusic.currentTime = target;
+    }
+  } catch (_) {
+    // Ignore seek race conditions while metadata loads.
+  }
+}
+
+function startBackgroundMusic() {
+  if (!bgMusic || musicStarted) {
+    return;
+  }
+
+  musicStarted = true;
+  bgMusic.loop = true;
+  bgMusic.volume = 0;
+
+  trySeekMusicToTenSeconds();
+
+  if (bgMusic.readyState < 1) {
+    bgMusic.addEventListener("loadedmetadata", trySeekMusicToTenSeconds, { once: true });
+  }
+
+  const playPromise = bgMusic.play();
+
+  if (playPromise && typeof playPromise.then === "function") {
+    playPromise.then(() => {
+      trySeekMusicToTenSeconds();
+      fadeMusicTo(0.2, 3000);
+    }).catch(() => {
+      musicStarted = false;
+    });
+  } else {
+    fadeMusicTo(0.2, 3000);
+  }
+}
+
+function setNoOffset(x, y) {
+  noBtn.style.setProperty("--no-x", `${x}px`);
+  noBtn.style.setProperty("--no-y", `${y}px`);
+}
+
+function setNoScale(scale) {
+  noBtn.style.setProperty("--no-scale", String(scale));
 }
 
 function resetNoButtonPosition() {
-  const wrapRect = wrap.getBoundingClientRect();
-  const noRect = noBtn.getBoundingClientRect();
+  dodgeCount = 0;
+  noScale = 1;
+  noMoving = false;
+  noDisabled = false;
+  noLabelIndex = 0;
 
-  const centeredX = (wrapRect.width - noRect.width) / 2;
-  const startY = wrapRect.height * 0.68 - noRect.height / 2;
+  noBtn.textContent = noLabelSequence[0];
+  noBtn.style.opacity = "1";
+  noBtn.style.pointerEvents = "auto";
+  noBtn.classList.remove("hidden");
 
-  placeNoAt(clamp(centeredX, 0, wrapRect.width - noRect.width), clamp(startY, 0, wrapRect.height - noRect.height));
+  noFinalMessage.classList.add("hidden");
+  hint.classList.remove("hidden");
+
+  setNoOffset(0, 0);
+  setNoScale(noScale);
 }
 
-function animateNoWave(targetX, targetY) {
-  const start = currentNoPosition();
-  const amplitude = Math.min(26, Math.max(14, Math.abs(targetX - start.x) * 0.25));
-  const direction = targetX >= start.x ? 1 : -1;
-  const duration = 560;
-  const begin = performance.now();
-
-  function frame(now) {
-    const rawT = clamp((now - begin) / duration, 0, 1);
-    const t = easeInOutSine(rawT);
-
-    const x = lerp(start.x, targetX, t);
-    const waveOffset = Math.sin(rawT * Math.PI * 2) * amplitude * (1 - rawT) * direction;
-    const yBase = lerp(start.y, targetY, t);
-    const y = yBase + waveOffset;
-
-    placeNoAt(x, y);
-
-    if (rawT < 1) {
-      requestAnimationFrame(frame);
-      return;
-    }
-
-    placeNoAt(targetX, targetY);
-    noMoving = false;
-  }
-
-  requestAnimationFrame(frame);
+function advanceNoLabel() {
+  noLabelIndex = Math.min(noLabelIndex + 1, noLabelSequence.length - 1);
+  noBtn.textContent = noLabelSequence[noLabelIndex];
 }
 
-function findNoTarget() {
+function shrinkNoButton() {
+  noScale = Math.max(noScale - 0.08, 0.55);
+  setNoScale(noScale);
+}
+
+function finalizeNoButton() {
+  noDisabled = true;
+  noBtn.style.opacity = "0";
+  noBtn.style.pointerEvents = "none";
+  hint.classList.add("hidden");
+  noFinalMessage.classList.remove("hidden");
+}
+
+function findNoTargetOffset() {
   const wrapRect = wrap.getBoundingClientRect();
   const noRect = noBtn.getBoundingClientRect();
   const yesRect = yesBtn.getBoundingClientRect();
 
-  const maxX = Math.max(0, wrapRect.width - noRect.width);
-  const maxY = Math.max(0, wrapRect.height - noRect.height);
+  const anchorX = wrapRect.width * 0.5;
+  const anchorY = wrapRect.height * 0.72;
 
-  let targetX = 0;
-  let targetY = 0;
+  const minOffsetX = -(anchorX - noRect.width / 2);
+  const maxOffsetX = wrapRect.width - noRect.width / 2 - anchorX;
+  const minOffsetY = -(anchorY - noRect.height / 2);
+  const maxOffsetY = wrapRect.height - noRect.height / 2 - anchorY;
 
-  const tries = 90;
+  const tries = 80;
   const safeGap = isPhoneLayout() ? 26 : 18;
 
+  let offsetX = 0;
+  let offsetY = 0;
+
   for (let i = 0; i < tries; i += 1) {
-    targetX = Math.random() * maxX;
-    targetY = Math.random() * maxY;
+    offsetX = minOffsetX + Math.random() * (maxOffsetX - minOffsetX);
+    offsetY = minOffsetY + Math.random() * (maxOffsetY - minOffsetY);
 
     const candidate = {
-      left: wrapRect.left + targetX,
-      right: wrapRect.left + targetX + noRect.width,
-      top: wrapRect.top + targetY,
-      bottom: wrapRect.top + targetY + noRect.height
+      left: wrapRect.left + anchorX + offsetX - noRect.width / 2,
+      right: wrapRect.left + anchorX + offsetX + noRect.width / 2,
+      top: wrapRect.top + anchorY + offsetY - noRect.height / 2,
+      bottom: wrapRect.top + anchorY + offsetY + noRect.height / 2
     };
 
     if (!rectanglesOverlap(candidate, yesRect, safeGap)) {
@@ -155,31 +244,60 @@ function findNoTarget() {
   }
 
   return {
-    x: clamp(targetX, 0, maxX),
-    y: clamp(targetY, 0, maxY)
+    x: clamp(offsetX, minOffsetX, maxOffsetX),
+    y: clamp(offsetY, minOffsetY, maxOffsetY)
   };
 }
 
-function moveNoButton() {
-  if (noMoving || gameScreen.classList.contains("hidden")) {
+function moveNoButton(event) {
+  if (event) {
+    event.preventDefault();
+  }
+
+  if (noMoving || noDisabled || gameScreen.classList.contains("hidden")) {
     return;
   }
 
   noMoving = true;
-  const target = findNoTarget();
-
   dodgeCount += 1;
+
   growYesButton();
   updateHint();
+  advanceNoLabel();
+  shrinkNoButton();
 
-  animateNoWave(target.x, target.y);
+  const target = findNoTargetOffset();
+  setNoOffset(target.x, target.y);
+
+  setTimeout(() => {
+    noMoving = false;
+
+    if (dodgeCount >= 6 && !noDisabled) {
+      finalizeNoButton();
+    }
+  }, 360);
 }
 
-function celebrate() {
+async function celebrate() {
+  if (celebrateStarted) {
+    return;
+  }
+
+  celebrateStarted = true;
+  yesBtn.style.pointerEvents = "none";
+  noBtn.style.pointerEvents = "none";
+
+  await sleep(1500);
+
   questionCard.classList.add("hidden");
   celebrateCard.classList.remove("hidden");
-  celebrateCard.classList.add("card-enter");
+  celebrateCard.style.opacity = "0";
+  celebrateCard.style.transition = "opacity 2200ms ease";
   app.setAttribute("aria-live", "off");
+
+  requestAnimationFrame(() => {
+    celebrateCard.style.opacity = "1";
+  });
 
   for (let i = 0; i < 26; i += 1) {
     const heart = document.createElement("span");
@@ -201,25 +319,140 @@ function celebrate() {
   }
 }
 
-function revealGameFromEnvelope() {
+async function tryLoadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => resolve(src);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+async function loadCollageSources(maxImages = 6) {
+  const sources = [];
+  const exts = ["jpeg", "jpg", "png", "webp"];
+
+  for (let i = 0; i <= 20; i += 1) {
+    for (const ext of exts) {
+      const src = `photos/${i}.${ext}`;
+      const loaded = await tryLoadImage(src);
+
+      if (loaded) {
+        sources.push(loaded);
+        break;
+      }
+    }
+
+    if (sources.length >= maxImages) {
+      break;
+    }
+  }
+
+  return sources;
+}
+
+function showStage(stageEl, fadeMs = 800) {
+  [memoryStage, collageStage, transitionStage].forEach((el) => {
+    el.classList.add("hidden");
+    el.classList.remove("visible");
+  });
+
+  stageEl.style.transitionDuration = `${fadeMs}ms`;
+  stageEl.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    stageEl.classList.add("visible");
+  });
+}
+
+async function runMemoryStage() {
+  memoryLine.style.opacity = "0";
+  memoryLine.style.transition = "opacity 5000ms ease";
+
+  showStage(memoryStage, 1500);
+
+  // Pure appearance fade-in, stage timing remains JS-driven.
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      memoryLine.style.opacity = "1";
+    }, 40);
+  });
+
+  await sleep(10000);
+  memoryStage.classList.remove("visible");
+  await sleep(900);
+}
+
+async function runCollageStage() {
+  showStage(collageStage);
+  collageGrid.innerHTML = "";
+
+  let sources = await loadCollageSources(6);
+
+  if (sources.length < 4) {
+    sources = ["photos/0.jpeg", "photos/1.jpeg", "photos/2.jpeg", "photos/4.jpeg", "photos/5.jpeg", "photos/6.jpeg"];
+  }
+
+  const used = sources.slice(0, 6);
+
+  for (const src of used) {
+    const img = document.createElement("img");
+    img.className = "collage-photo";
+    img.src = src;
+    img.alt = "Memory photo";
+    collageGrid.appendChild(img);
+
+    requestAnimationFrame(() => {
+      img.classList.add("show");
+    });
+
+    await sleep(700);
+  }
+
+  await sleep(4000);
+  collageGrid.classList.add("fade-out");
+  await sleep(1200);
+  collageGrid.classList.remove("fade-out");
+}
+
+async function runTransitionStage() {
+  showStage(transitionStage);
+  await sleep(3000);
+  transitionStage.classList.remove("visible");
+  await sleep(800);
+}
+
+async function runStorySequence() {
+  storyScreen.classList.remove("hidden");
+
+  await runMemoryStage();
+  await runCollageStage();
+  await runTransitionStage();
+
+  storyScreen.classList.add("hidden");
+  gameScreen.classList.remove("hidden");
+  gameScreen.classList.add("screen-fade-in");
+  resetNoButtonPosition();
+}
+
+async function revealGameFromEnvelope() {
   if (envelopeOpened) {
     return;
   }
+
+  startBackgroundMusic();
 
   envelopeOpened = true;
   envelopeButton.classList.add("opened");
   envelopeHint.textContent = "Opening your letter...";
 
-  setTimeout(() => {
-    envelopeScreen.classList.add("screen-fade-out");
-  }, 650);
+  await sleep(700);
+  envelopeScreen.style.animationDuration = "1000ms";
+  envelopeScreen.classList.add("screen-fade-out");
+  await sleep(1000);
 
-  setTimeout(() => {
-    envelopeScreen.style.display = "none";
-    gameScreen.classList.remove("hidden");
-    gameScreen.classList.add("screen-fade-in");
-    resetNoButtonPosition();
-  }, 980);
+  envelopeScreen.style.display = "none";
+  await runStorySequence();
 }
 
 envelopeButton.addEventListener("click", revealGameFromEnvelope);
@@ -231,15 +464,29 @@ yesBtn.addEventListener("animationend", () => {
 });
 
 yesBtn.addEventListener("click", celebrate);
-noBtn.addEventListener("mouseenter", moveNoButton);
+
+// Touch-first handler for iPhone/Safari. Suppress follow-up click to avoid double-moves.
 noBtn.addEventListener("pointerdown", (event) => {
-  event.preventDefault();
-  moveNoButton();
+  clickSuppressUntil = Date.now() + 420;
+  moveNoButton(event);
 });
 
+noBtn.addEventListener("touchstart", (event) => {
+  clickSuppressUntil = Date.now() + 420;
+  moveNoButton(event);
+}, { passive: false });
+
+if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+  noBtn.addEventListener("mouseenter", moveNoButton);
+}
+
 noBtn.addEventListener("click", (event) => {
-  event.preventDefault();
-  moveNoButton();
+  if (Date.now() < clickSuppressUntil) {
+    event.preventDefault();
+    return;
+  }
+
+  moveNoButton(event);
 });
 
 window.addEventListener("resize", () => {
@@ -247,3 +494,20 @@ window.addEventListener("resize", () => {
     resetNoButtonPosition();
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

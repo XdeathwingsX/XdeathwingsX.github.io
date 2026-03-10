@@ -12,9 +12,26 @@ body {
   background: #5c1830;
 }
 
+html,
+body,
+#app,
+#envelope-screen {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+#envelope-screen {
+  height: 100vh;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
 #envelope-button {
   display: block;
   overflow: hidden;
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
 .envelope-top-text,
@@ -73,7 +90,7 @@ body {
 }
 
 .envelope-letter {
-  top: 34%;
+  top: 56%;
   width: min(84vw, 560px);
   height: min(52vh, 420px);
   background: #fff;
@@ -216,4 +233,10 @@ body {
     width: 88vw;
     height: 44vh;
   }
+}
+
+#question-text {
+  font-family: "Dancing Script", "Brush Script MT", "Segoe Script", cursive;
+  font-style: italic;
+  font-weight: 700;
 }

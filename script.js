@@ -223,6 +223,9 @@ function revealGameFromEnvelope() {
 }
 
 envelopeButton.addEventListener("click", revealGameFromEnvelope);
+envelopeButton.addEventListener("pointerup", revealGameFromEnvelope);
+envelopeButton.addEventListener("touchend", revealGameFromEnvelope, { passive: true });
+
 yesBtn.addEventListener("animationend", () => {
   yesBtn.classList.remove("yes-pop");
 });
@@ -244,4 +247,3 @@ window.addEventListener("resize", () => {
     resetNoButtonPosition();
   }
 });
-
